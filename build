@@ -7,6 +7,8 @@
 # Copyright (C) 2016-2017 Joe Maples
 # Copyright (C) 2017-2018 Nathan Chancellor
 #
+# Add Telegram Stuff By @kernelaesthesia (2019)
+#
 # GCC cross compiler  compilation script
 
 
@@ -24,6 +26,56 @@
 # https://www.kernel.org/
 # https://git.linaro.org/toolchain/gcc.git # linaro and gnu
 
+#
+# Telegram Function
+#
+
+git clone https://github.com/fabianonline/telegram.sh telegram
+
+TELEGRAM_ID=-1001268516549
+TELEGRAM=telegram/telegram
+BOT_API_KEY=723044228:AAFpmF9aHsMTinCJ7Yq3HLxEzjEBiO47rlU
+TELEGRAM_TOKEN=${BOT_API_KEY}
+
+export TELEGRAM_TOKEN
+
+# Push toolchain package to channel
+function push_tc() {
+	JIP="${PACKAGE}"
+	curl -F document=@$JIP  "https://api.telegram.org/bot$BOT_API_KEY/sendDocument" \
+	     -F chat_id="$TELEGRAM_ID"
+}
+
+# Send the info up
+function channelcast() {
+	"${TELEGRAM}" -c ${TELEGRAM_ID} -H \
+		"$(
+			for POST in "${@}"; do
+				echo "${POST}"
+			done
+		)"
+}
+
+# Send sticker
+function sendstick() {
+	curl -s -X POST "https://api.telegram.org/bot$BOT_API_KEY/sendSticker" \
+		-d sticker="CAADAQADDgEAAtYvmwa3XVlL__xsuwI" \
+		-d chat_id="$TELEGRAM_ID" >> /dev/null
+}
+
+# Fin prober
+function fin() {
+	channelcast "<b>Build Toolchain Done!</b>"
+}
+
+# Own Function
+channelcast_start() {
+ channelcast "<b>Start Build Toolchain</b>"
+}
+
+#
+# Telegram Function End
+#
 
 #############
 # FUNCTIONS #
@@ -182,7 +234,7 @@ function setup_variables() {
     MPC="mpc-1.1.0"
     ISL="isl-0.21"
     GLIBC="glibc-2.29"
-    LINUX="5.0"
+    LINUX="5.0.12"
 
     # Start of script
     START=$(date +%s)
@@ -220,8 +272,8 @@ function parse_parameters() {
 
     # Default values
     case "${ARCH}" in
-        "arm") TARGET="arm-linux-gnueabi" ;;
-        "arm64") TARGET="aarch64-linux-gnu" ;;
+        "arm") TARGET="arm-eabi-gnu" ;;
+        "arm64") TARGET="aarch64-linux-android" ;;
         "i686") TARGET="i686-linux-gnu" ;;
         "x86_64") [[ ${VERSION} -le 5 ]] && die "Will not build, Use newer version instead" -n
                   TARGET="x86_64-linux-gnu" ;;
@@ -599,7 +651,8 @@ function build_gcc() {
     ../gcc/configure "${CONFIGURATION[@]}" \
                      --enable-languages=c,c++ \
                      --target=${TARGET} \
-                     --prefix="${INSTALL}"
+                     --prefix="${INSTALL} \
+                     --pkg-version"
     make all-gcc "${JOBS}" || die "Error while building gcc!" -n
     make install-gcc "${JOBS}" || die "Error while installing gcc!" -n
     if [[ ${ARCH} = "x86_64" ]]; then
@@ -695,7 +748,19 @@ function ending_info() {
     echo "\a"
 }
 
+push_to_github() {
+    git config --global user.name "buildhost"
+    git config --global user.email "Z5X67280@163.com"
+    cd ${TARGET}
+    git init
+    git add .
+    git commit -m "Today's New Toolchain Build"
+    git remote add origin https://github.com/team-nit-rovo/tc_build
+    git push -u origin ${TARGET}-$(TZ=UTC date +%Y%m%d) -f
+}
 
+sendstick
+channelcast_start
 setup_variables
 parse_parameters "${@}"
 trap 'unmount_tmpfs; die "Manually aborted!" -n' SIGINT SIGTERM
@@ -710,6 +775,9 @@ build_binutils
 build_headers
 build_gcc
 build_glibc
-install_gcc
+# install_gcc
 package_tc
 ending_info
+push_tc
+# push_to_github
+fin
