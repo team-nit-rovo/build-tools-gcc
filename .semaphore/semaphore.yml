@@ -1,0 +1,16 @@
+version: v1.0
+name: Fak Nito Kernel
+agent:
+  machine:
+    type: e1-standard-8
+    os_image: ubuntu1804
+blocks:
+  - name: "Fak Kernel"
+    task:
+      jobs:
+      - name: Compile Kernel
+        commands:
+          - checkout
+          - sudo apt install flex bison ncurses-dev texinfo gcc gperf patch libtool automake g++ libncurses5-dev gawk expat libexpat1-dev python-all-dev binutils-dev libgcc1:i386 bc libcap-dev autoconf libgmp-dev build-essential gcc-multilib g++-multilib pkg-config libmpc-dev libmpfr-dev autopoint gettext liblzma-dev libssl-dev libz-dev -y
+          - chmod +x build
+          - sudo ./build -a arm64 -s gnu -v 10 -j 32 -nt -p xz -V

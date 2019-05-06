@@ -226,8 +226,11 @@ function setup_variables() {
     CONFIGURATION=( "--disable-multilib" "--disable-werror" )
     JOBS="-j$(($(nproc --all) + 1))"
 
+    BUILDCONFIG=( "CFLAGS=-g0 -O3 -fstack-protector-strong"
+                    "CXXFLAGS=-g0 -O3" )
+                    
     # Binary versions
-    BINUTILS_git="binutils-2_32-branch"
+    BINUTILS_git="master"
     BINUTILS_tar="2.32"
     GMP="gmp-6.1.2"
     MPFR="mpfr-4.0.2"
@@ -652,7 +655,8 @@ function build_gcc() {
                      --enable-languages=c,c++ \
                      --target=${TARGET} \
                      --prefix="${INSTALL} \
-                     --pkg-version"
+                     --with-pkg-version='Team Nit Rovo' \
+                     "$(BUILDCONFIG)"
     make all-gcc "${JOBS}" || die "Error while building gcc!" -n
     make install-gcc "${JOBS}" || die "Error while installing gcc!" -n
     if [[ ${ARCH} = "x86_64" ]]; then
